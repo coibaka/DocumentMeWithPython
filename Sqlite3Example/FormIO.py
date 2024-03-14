@@ -1,6 +1,7 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 import os
+import sqlite3
 
 def show_entry_fields():
     print(f"Tên CSDL: {e1.get()}")
@@ -10,12 +11,35 @@ def show_entry_fields():
 def get_database():
     db_name = e1.get()
     table_name = e2.get()
-    # Giả sử rằng database là một file trong thư mục hiện tại
     if os.path.isfile(f"{db_name}.db"):
         print(f"Database {db_name} found.")
-        # Thêm mã để load database và table ở đây
+        load_data_to_treeview(db_name, table_name)
     else:
         messagebox.showerror("Error", f"Database {db_name} not found.")
+
+def load_data_to_treeview(db_name, table_name):
+    # Kết nối với database
+    conn = sqlite3.connect(f"{db_name}.db")
+    cur = conn.cursor()
+    
+    # Lấy tất cả các cột từ table
+    cur.execute(f"PRAGMA table_info({table_name})")
+    columns = [info[1] for info in cur.fetchall()]
+    
+    # Cấu hình treeview với các cột
+    tree = ttk.Treeview(master, columns=columns, show='headings')
+    for col in columns:
+        tree.heading(col, text=col)
+    
+    # Đưa dữ liệu vào treeview
+    cur.execute(f"SELECT * FROM {table_name}")
+    for row in cur.fetchall():
+        tree.insert('', 'end', values=row)
+    
+    tree.grid(row=4, columnspan=3)
+    
+    # Đóng kết nối
+    conn.close()
 
 master = tk.Tk()
 tk.Label(master, text="Nhập tên CSDL").grid(row=0)
