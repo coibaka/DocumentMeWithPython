@@ -15,15 +15,16 @@ def load_to_treeview(db_name=None, table_name=None):
         cursor.execute(f'SELECT * FROM {table_name};')
         
         # Lấy tên cột và cấu hình các cột cho treeview
-        columns = [description[0] for description in cursor.description]
+        columns = ['ID'] + [description[0] for description in cursor.description]
         tree['columns'] = columns
+        # Định nghĩa lại các cột để không có khoảng trắng
         for col in columns:
             tree.heading(col, text=col)
-            tree.column(col, anchor='w')
+            tree.column(col, width=100, anchor='w')
         
         # Thêm dữ liệu từ mỗi hàng vào treeview
-        for row in cursor.fetchall():
-            tree.insert('', 'end', values=row)
+        for idx, row in enumerate(cursor.fetchall(), start=1):
+            tree.insert('', 'end', values=(idx,) + row)
         
         # Đóng kết nối cơ sở dữ liệu
         conn.close()
@@ -33,14 +34,22 @@ def load_to_treeview(db_name=None, table_name=None):
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
         tables = cursor.fetchall()
-        for table in tables:
-            tree.insert("", "end", values=(table[0],))
+        tree['columns'] = ['ID', 'Table Name']
+        for col in ['ID', 'Table Name']:
+            tree.heading(col, text=col)
+            tree.column(col, width=100, anchor='w')
+        for idx, table in enumerate(tables, start=1):
+            tree.insert("", "end", values=(idx, table[0]))
         conn.close()
     else:
         # Load và hiển thị tất cả cơ sở dữ liệu trong thư mục hiện tại
         databases = [filename for filename in os.listdir() if filename.endswith(".db")]
-        for db in databases:
-            tree.insert("", "end", values=(db,))
+        tree['columns'] = ['ID', 'Database Name']
+        for col in ['ID', 'Database Name']:
+            tree.heading(col, text=col)
+            tree.column(col, width=100, anchor='w')
+        for idx, db in enumerate(databases, start=1):
+            tree.insert("", "end", values=(idx, db))
 
 # Hàm được gọi khi nhấn button "GET"
 def on_get_click():
@@ -48,28 +57,32 @@ def on_get_click():
     table_name = table_entry.get()
     load_to_treeview(db_name, table_name)
 
-# Tạo GUI cho nhập liệu
+# Tạo GUI cho nhập liệu và treeview
 input_window = tk.Tk()
-input_window.title("Database and Table Input")
+input_window.title("Database and Table Viewer")
 
-tk.Label(input_window, text="Database Name:").pack(side="top", fill="x")
-db_entry = tk.Entry(input_window)
-db_entry.pack(side="top", fill="x")
+# Tạo frame cho treeview
+frame = ttk.Frame(input_window)
+frame.pack(expand=True, fill='both')
 
-tk.Label(input_window, text="Table Name:").pack(side="top", fill="x")
-table_entry = tk.Entry(input_window)
-table_entry.pack(side="top", fill="x")
-
-get_button = tk.Button(input_window, text="GET", command=on_get_click)
-get_button.pack(side="top")
-
-# Tạo GUI cho treeview
-treeview_window = tk.Toplevel()
-treeview_window.title("Database Viewer")
-
-tree = ttk.Treeview(treeview_window, columns=('Name',), show='headings')
-tree.heading('Name', text='Name')
+# Tạo treeview trong frame
+tree = ttk.Treeview(frame, show='headings')  # Đảm bảo rằng 'show' chỉ định 'headings' để không hiển thị cột trống
 tree.pack(expand=True, fill='both')
+
+# Tạo frame cho input
+input_frame = ttk.Frame(input_window)
+input_frame.pack(side="bottom", fill="x", expand=False)
+
+tk.Label(input_frame, text="Database Name:").pack(side="left")
+db_entry = tk.Entry(input_frame)
+db_entry.pack(side="left")
+
+tk.Label(input_frame, text="Table Name:").pack(side="left")
+table_entry = tk.Entry(input_frame)
+table_entry.pack(side="left")
+
+get_button = tk.Button(input_frame, text="GET", command=on_get_click)
+get_button.pack(side="left")
 
 # Hiển thị cửa sổ
 input_window.mainloop()
