@@ -3,73 +3,74 @@ import sqlite3
 import tkinter as tk
 from tkinter import ttk
 
-# Hàm để load databases hoặc tables vào treeview
 def load_to_treeview(db_name=None, table_name=None):
-    tree.delete(*tree.get_children())  # Xóa dữ liệu cũ trong treeview
+    tree.delete(*tree.get_children())
     if db_name and table_name:
-        # Kết nối tới cơ sở dữ liệu
         conn = sqlite3.connect(db_name)
         cursor = conn.cursor()
-        
-        # Thực hiện truy vấn để lấy tất cả dữ liệu từ bảng
         cursor.execute(f'SELECT * FROM {table_name};')
-        
-        # Lấy tên cột và cấu hình các cột cho treeview
-        columns = ['ID'] + [description[0] for description in cursor.description]
+        columns = [description[0] for description in cursor.description]
         tree['columns'] = columns
-        # Định nghĩa lại các cột để không có khoảng trắng
+        tree.heading('#0', text='Row ID', anchor='w')
+        tree.column('#0', anchor='w')
         for col in columns:
             tree.heading(col, text=col)
-            tree.column(col, width=100, anchor='w')
-        
-        # Thêm dữ liệu từ mỗi hàng vào treeview
-        for idx, row in enumerate(cursor.fetchall(), start=1):
-            tree.insert('', 'end', values=(idx,) + row)
-        
-        # Đóng kết nối cơ sở dữ liệu
+            tree.column(col, anchor='center')
+        for row in cursor.fetchall():
+            tree.insert('', 'end', text=row[0], values=row[1:])
         conn.close()
     elif db_name:
-        # Load và hiển thị các bảng trong cơ sở dữ liệu được chỉ định
         conn = sqlite3.connect(db_name)
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
         tables = cursor.fetchall()
-        tree['columns'] = ['ID', 'Table Name']
-        for col in ['ID', 'Table Name']:
-            tree.heading(col, text=col)
-            tree.column(col, width=100, anchor='w')
-        for idx, table in enumerate(tables, start=1):
-            tree.insert("", "end", values=(idx, table[0]))
+        tree['columns'] = ['Tables']
+        tree.heading('#0', text='Database', anchor='w')
+        tree.column('#0', anchor='w', width=100)
+        tree.heading('Tables', text='Table Name')
+        tree.column('Tables', anchor='center', width=200)
+        for table in tables:
+            tree.insert('', 'end', text=db_name, values=table)
         conn.close()
     else:
-        # Load và hiển thị tất cả cơ sở dữ liệu trong thư mục hiện tại
         databases = [filename for filename in os.listdir() if filename.endswith(".db")]
-        tree['columns'] = ['ID', 'Database Name']
-        for col in ['ID', 'Database Name']:
-            tree.heading(col, text=col)
-            tree.column(col, width=100, anchor='w')
+        tree['columns'] = ['Databases']
+        tree.heading('#0', text='Index', anchor='w')
+        tree.column('#0', anchor='w', width=100)
+        tree.heading('Databases', text='Database Name')
+        tree.column('Databases', anchor='center', width=200)
         for idx, db in enumerate(databases, start=1):
-            tree.insert("", "end", values=(idx, db))
+            tree.insert('', 'end', text=idx, values=db)
 
-# Hàm được gọi khi nhấn button "GET"
+
+def on_item_double_click(event):
+    selected_items = tree.selection()
+    if selected_items:  # Check if the selection is not empty
+        item = selected_items[0]
+        item_text = tree.item(item, 'values')
+        if tree.parent(item):
+            db_name = tree.item(tree.parent(item), 'text')
+            table_name = item_text[0]
+            load_to_treeview(db_name=db_name, table_name=table_name)
+        else:
+            db_name = item_text[0]
+            load_to_treeview(db_name=db_name)
+
 def on_get_click():
     db_name = db_entry.get()
     table_name = table_entry.get()
     load_to_treeview(db_name, table_name)
 
-# Tạo GUI cho nhập liệu và treeview
 input_window = tk.Tk()
 input_window.title("Database and Table Viewer")
 
-# Tạo frame cho treeview
 frame = ttk.Frame(input_window)
 frame.pack(expand=True, fill='both')
 
-# Tạo treeview trong frame
-tree = ttk.Treeview(frame, show='headings')  # Đảm bảo rằng 'show' chỉ định 'headings' để không hiển thị cột trống
+tree = ttk.Treeview(frame, show='tree')
 tree.pack(expand=True, fill='both')
+tree.bind('<Double-1>', on_item_double_click)
 
-# Tạo frame cho input
 input_frame = ttk.Frame(input_window)
 input_frame.pack(side="bottom", fill="x", expand=False)
 
@@ -84,5 +85,4 @@ table_entry.pack(side="left")
 get_button = tk.Button(input_frame, text="GET", command=on_get_click)
 get_button.pack(side="left")
 
-# Hiển thị cửa sổ
 input_window.mainloop()
