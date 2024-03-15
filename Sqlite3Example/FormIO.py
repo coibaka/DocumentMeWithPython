@@ -41,6 +41,7 @@ def load_data_to_treeview(db_name, table_name):
     # Đóng kết nối
     conn.close()
 
+
 master = tk.Tk()
 tk.Label(master, text="Nhập tên CSDL").grid(row=0)
 tk.Label(master, text="Nhập tên Table").grid(row=1)
